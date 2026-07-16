@@ -6,17 +6,16 @@ from streamlit_folium import st_folium
 import re
 
 st.set_page_config(
-    page_title="서울시 공영주차장",
+    page_title="서울시 공영주차장 안내",
     page_icon="🅿️",
     layout="wide"
 )
 
 st.title("🅿️ 서울시 공영주차장 안내")
-st.write("서울시 공영주차장 정보를 지도에서 확인하세요.")
 
 uploaded_file = st.sidebar.file_uploader(
     "CSV 업로드",
-    type=["csv"]
+    type="csv"
 )
 
 if uploaded_file is None:
@@ -28,172 +27,199 @@ try:
 except:
     df = pd.read_csv(uploaded_file, encoding="cp949")
 
+# ===========================
+# 컬럼 선택
+# ===========================
 
-def find_col(keyword):
+use_cols = {
+    "주차장명":"주차장명",
+    "주소":"주소",
+    "위도":"위도",
+    "경도":"경도",
+    "전화번호":"전화번호",
+    "유무료구분명":"무료",
+    "기본 주차 요금":"기본요금",
+    "추가 단위 요금":"추가요금",
+    "주말 운영 시작시각(HHMM)":"주말시작",
+    "주말 운영 종료시각(HHMM)":"주말종료"
+}
 
-    for c in df.columns:
-        if keyword in c:
-            return c
-    return None
+df = df[list(use_cols.keys())]
 
+df = df.rename(columns=use_cols)
 
-name_col = find_col("주차장명")
-addr_col = find_col("주소")
-lat_col = find_col("위도")
-lon_col = find_col("경도")
-tel_col = find_col("전화")
+# ===========================
+# 숫자 변환
+# ===========================
 
-basic_col = find_col("기본 주차 요금")
-add_col = find_col("추가 단위 요금")
-free_col = find_col("유무료구분명")
-weekend_col = find_col("주말 운영 시작")
+df["기본요금"] = (
+    df["기본요금"]
+    .astype(str)
+    .str.replace(",","")
+)
 
+df["추가요금"] = (
+    df["추가요금"]
+    .astype(str)
+    .str.replace(",","")
+)
 
-rename = {}
+df["기본요금"] = pd.to_numeric(
+    df["기본요금"],
+    errors="coerce"
+)
 
-if name_col:
-    rename[name_col] = "주차장명"
+df["추가요금"] = pd.to_numeric(
+    df["추가요금"],
+    errors="coerce"
+)
 
-if addr_col:
-    rename[addr_col] = "주소"
-
-if lat_col:
-    rename[lat_col] = "위도"
-
-if lon_col:
-    rename[lon_col] = "경도"
-
-if tel_col:
-    rename[tel_col] = "전화번호"
-
-if basic_col:
-    rename[basic_col] = "기본요금"
-
-if add_col:
-    rename[add_col] = "추가요금"
-
-if free_col:
-    rename[free_col] = "무료여부"
-
-rename["주말 운영 시작시각(HHMM)"] = "주말시작"
-rename["주말 운영 종료시각(HHMM)"] = "주말종료"
-
-if weekend_col:
-    rename[weekend_col] = "주말운영"
-
-df = df.rename(columns=rename)
-
-need = [
-    "주차장명",
-    "주소",
-    "위도",
-    "경도",
-    "전화번호",
-    "기본요금",
-    "추가요금",
-    "무료여부",
-    "주말운영"
-]
-
-for c in need:
-    if c not in df.columns:
-        df[c] = ""
-
-
-def num(x):
-
-    if pd.isna(x):
-        return 999999
-
-    x = str(x)
-
-    n = re.findall(r"\d+", x)
-
-    if len(n) == 0:
-        return 999999
-
-    return int(n[0])
-
-
-df["기본요금"] = df["기본요금"].apply(num)
-df["추가요금"] = df["추가요금"].apply(num)
+df["기본요금"] = df["기본요금"].fillna(999999)
+df["추가요금"] = df["추가요금"].fillna(999999)
 
 df["위도"] = pd.to_numeric(df["위도"], errors="coerce")
 df["경도"] = pd.to_numeric(df["경도"], errors="coerce")
 
-df = df.dropna(subset=["위도", "경도"])
+df = df.dropna(subset=["위도","경도"])
 
+# ===========================
+# 자치구 추출
+# ===========================
 
-district = []
+df["자치구"] = df["주소"].str.extract(
+    r'([가-힣]+구)'
+)
+# ===========================
+# 검색
+# ===========================
 
-for addr in df["주소"]:
+st.sidebar.header("검색")
 
-    m = re.search(r"([가-힣]+구)", str(addr))
+gu_list = ["전체"] + sorted(df["자치구"].unique().tolist())
 
-    if m:
-        district.append(m.group(1))
-    else:
-        district.append("기타")
-
-df["자치구"] = district
-
-gu = st.sidebar.selectbox(
-    "자치구",
-    ["전체"] + sorted(df["자치구"].unique())
+selected_gu = st.sidebar.selectbox(
+    "자치구 선택",
+    gu_list
 )
 
 keyword = st.sidebar.text_input(
-    "주소 검색"
+    "주소 또는 주차장명 검색"
 )
 
-if gu != "전체":
-    df = df[df["자치구"] == gu]
+free_only = st.sidebar.checkbox(
+    "무료 주차장만 보기"
+)
+
+# ===========================
+# 필터
+# ===========================
+
+result = df.copy()
+
+if selected_gu != "전체":
+    result = result[
+        result["자치구"] == selected_gu
+    ]
 
 if keyword:
-    df = df[df["주소"].str.contains(keyword, na=False)]
 
-st.subheader("검색 결과")
+    result = result[
+        result["주소"].str.contains(
+            keyword,
+            case=False,
+            na=False
+        )
+        |
+        result["주차장명"].str.contains(
+            keyword,
+            case=False,
+            na=False
+        )
+    ]
 
-c1, c2 = st.columns(2)
+if free_only:
+
+    result = result[
+        result["무료"]
+        .astype(str)
+        .str.contains("무료", na=False)
+    ]
+
+# ===========================
+# 통계
+# ===========================
+
+c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.metric("주차장 수", len(df))
+
+    st.metric(
+        "주차장 수",
+        len(result)
+    )
 
 with c2:
 
-    if len(df):
+    if len(result):
+
         st.metric(
             "최저 기본요금",
-            f"{df['기본요금'].min()}원"
+            f"{int(result['기본요금'].min())} 원"
         )
-# -----------------------------
-# 지도 생성
-# -----------------------------
 
-if len(df) > 0:
+    else:
+
+        st.metric(
+            "최저 기본요금",
+            "-"
+        )
+
+with c3:
+
+    free_count = len(
+
+        result[
+            result["무료"]
+            .astype(str)
+            .str.contains("무료", na=False)
+        ]
+
+    )
+
+    st.metric(
+        "무료 주차장",
+        free_count
+    )
+    # ===========================
+# 지도
+# ===========================
+
+st.subheader("🗺️ 공영주차장 위치")
+
+if len(result) > 0:
 
     center = [
-        df["위도"].mean(),
-        df["경도"].mean()
+        result["위도"].mean(),
+        result["경도"].mean()
     ]
 
 else:
 
     center = [37.5665, 126.9780]
 
-
 m = folium.Map(
     location=center,
-    zoom_start=12
+    zoom_start=12,
+    control_scale=True
 )
 
 cluster = MarkerCluster().add_to(m)
 
-for _, row in df.iterrows():
+for _, row in result.iterrows():
 
     color = "blue"
 
-    if "무료" in str(row["무료여부"]) or "Y" in str(row["무료여부"]):
+    if "무료" in str(row["무료"]):
         color = "green"
 
     popup = f"""
@@ -202,20 +228,17 @@ for _, row in df.iterrows():
     📍 주소<br>
     {row['주소']}<br><br>
 
-    💰 기본요금<br>
-    {row['기본요금']}원<br><br>
+    💰 기본요금 : {int(row['기본요금'])}원<br>
 
-    ➕ 추가요금<br>
-    {row['추가요금']}원<br><br>
+    ➕ 추가요금 : {int(row['추가요금'])}원<br><br>
 
-    🆓 무료여부<br>
-    {row['무료여부']}<br><br>
+    🆓 {row['무료']}<br><br>
 
-    📅 주말운영<br>
-    {row["주말시작"]} ~ {row["주말종료"]}
+    📅 주말 운영<br>
 
-    ☎ 전화번호<br>
-    {row['전화번호']}
+    {row['주말시작']} ~ {row['주말종료']}<br><br>
+
+    ☎ {row['전화번호']}
     """
 
     folium.Marker(
@@ -229,7 +252,7 @@ for _, row in df.iterrows():
 
         popup=folium.Popup(
             popup,
-            max_width=300
+            max_width=320
         ),
 
         icon=folium.Icon(
@@ -239,23 +262,21 @@ for _, row in df.iterrows():
 
     ).add_to(cluster)
 
-st.subheader("🗺️ 공영주차장 지도")
-
 st_folium(
     m,
     width=None,
     height=650
 )
 
-# -----------------------------
+# ===========================
 # 가장 저렴한 주차장
-# -----------------------------
+# ===========================
 
 st.subheader("💰 가장 저렴한 공영주차장")
 
-if len(df) > 0:
+if len(result):
 
-    cheap = df.sort_values(
+    cheap = result.sort_values(
         "기본요금"
     ).iloc[0]
 
@@ -264,105 +285,85 @@ if len(df) > 0:
 
 주소 : {cheap['주소']}
 
-기본요금 : {cheap['기본요금']}원
+기본요금 : {int(cheap['기본요금'])}원
 
-추가요금 : {cheap['추가요금']}원
+추가요금 : {int(cheap['추가요금'])}원
+
+무료 여부 : {cheap['무료']}
 """)
 
 else:
 
     st.warning("검색 결과가 없습니다.")
-
-# -----------------------------
-# 무료 주차장 개수
-# -----------------------------
-
-free_count = len(
-
-    df[
-        df["무료여부"]
-        .astype(str)
-        .str.contains("무료", na=False)
-    ]
-
-)
-
-st.info(f"🆓 무료 주차장 : {free_count}개")
-
-# -----------------------------
-# 주말 운영 개수
-# -----------------------------
-
-weekend_count = len(
-
-    df[
-        df["주말운영"]
-        .astype(str)
-        .str.contains("Y|운영|가능", na=False)
-    ]
-
-)
-
-st.info(f"📅 주말 운영 : {weekend_count}개")
-# -----------------------------
+# ===========================
 # 자치구별 주차장 개수
-# -----------------------------
-st.subheader("📊 자치구별 공영주차장 개수")
+# ===========================
 
-chart_df = (
-    df.groupby("자치구")
-      .size()
-      .reset_index(name="개수")
-      .sort_values("개수", ascending=False)
-)
+st.subheader("📊 자치구별 주차장 개수")
 
-if len(chart_df) > 0:
-    st.bar_chart(
-        chart_df.set_index("자치구")
+if len(result):
+
+    chart = (
+        result.groupby("자치구")
+        .size()
+        .reset_index(name="주차장 수")
+        .sort_values("주차장 수", ascending=False)
     )
 
-# -----------------------------
+    st.bar_chart(
+        chart.set_index("자치구")
+    )
+
+# ===========================
 # 검색 결과 테이블
-# -----------------------------
+# ===========================
+
 st.subheader("📋 검색 결과")
 
-show_cols = []
-
-for col in [
+show_cols = [
     "주차장명",
     "주소",
+    "자치구",
     "기본요금",
     "추가요금",
-    "무료여부",
-    "주말운영",
+    "무료",
+    "주말시작",
+    "주말종료",
     "전화번호"
-]:
-    if col in df.columns:
-        show_cols.append(col)
+]
 
 st.dataframe(
-    df[show_cols],
+    result[show_cols],
     use_container_width=True,
     hide_index=True
 )
 
-# -----------------------------
+# ===========================
 # CSV 다운로드
-# -----------------------------
-csv = df.to_csv(
+# ===========================
+
+csv = result.to_csv(
     index=False,
     encoding="utf-8-sig"
 )
 
 st.download_button(
-    "📥 검색 결과 다운로드",
+    label="📥 검색 결과 CSV 다운로드",
     data=csv,
     file_name="parking_result.csv",
     mime="text/csv"
 )
 
-# -----------------------------
-# Footer
-# -----------------------------
+# ===========================
+# 앱 정보
+# ===========================
+
 st.markdown("---")
-st.caption("서울시 공영주차장 정보 조회 앱 | Streamlit")
+
+st.caption("🅿️ 서울시 공영주차장 정보 공유 앱")
+
+st.caption("데이터 : 서울시 공공데이터")
+
+st.caption("제작 : Streamlit + Folium")ㅍ
+
+df["자치구"] = df["자치구"].fillna("기타")
