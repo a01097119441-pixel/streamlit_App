@@ -1,0 +1,128 @@
+/* =========================
+   전체 배경
+========================= */
+
+.stApp{
+    background:#f5f7fb;
+}
+
+/* =========================
+   제목
+========================= */
+
+h1{
+    color:#1565c0;
+    font-weight:700;
+}
+
+h2,h3{
+    color:#1976d2;
+}
+
+/* =========================
+   사이드바
+========================= */
+
+section[data-testid="stSidebar"]{
+    background:#ffffff;
+    border-right:1px solid #e5e5e5;
+}
+
+/* =========================
+   Metric 카드
+========================= */
+
+div[data-testid="metric-container"]{
+
+    background:white;
+
+    border-radius:15px;
+
+    padding:20px;
+
+    box-shadow:0 4px 10px rgba(0,0,0,.08);
+
+    border-left:6px solid #1976d2;
+}
+
+/* =========================
+   버튼
+========================= */
+
+.stButton>button{
+
+    background:#1976d2;
+
+    color:white;
+
+    border-radius:10px;
+
+    border:none;
+
+    height:45px;
+
+    font-weight:bold;
+
+}
+
+.stDownloadButton>button{
+
+    background:#2e7d32;
+
+    color:white;
+
+    border-radius:10px;
+
+    border:none;
+
+}
+
+/* =========================
+   데이터프레임
+========================= */
+
+div[data-testid="stDataFrame"]{
+
+    border-radius:15px;
+
+    overflow:hidden;
+
+}
+
+/* =========================
+   입력창
+========================= */
+
+input{
+
+    border-radius:10px !important;
+
+}
+
+/* =========================
+   지도
+========================= */
+
+iframe{
+
+    border-radius:15px;
+
+}
+
+/* =========================
+   추천 카드
+========================= */
+
+.recommend-card{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:15px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.1);
+
+    border-left:8px solid #43a047;
+
+}
