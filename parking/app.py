@@ -364,6 +364,6 @@ st.caption("🅿️ 서울시 공영주차장 정보 공유 앱")
 
 st.caption("데이터 : 서울시 공공데이터")
 
-st.caption("제작 : Streamlit + Folium")ㅍ
+st.caption("제작 : Streamlit + Folium")
 
 df["자치구"] = df["자치구"].fillna("기타")
