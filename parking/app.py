@@ -43,10 +43,10 @@ lat_col = find_col("위도")
 lon_col = find_col("경도")
 tel_col = find_col("전화")
 
-basic_col = find_col("기본")
-add_col = find_col("추가")
-free_col = find_col("무료")
-weekend_col = find_col("주말")
+basic_col = find_col("기본 주차 요금")
+add_col = find_col("추가 단위 요금")
+free_col = find_col("유무료구분명")
+weekend_col = find_col("주말 운영 시작")
 
 
 rename = {}
@@ -74,6 +74,9 @@ if add_col:
 
 if free_col:
     rename[free_col] = "무료여부"
+
+rename["주말 운영 시작시각(HHMM)"] = "주말시작"
+rename["주말 운영 종료시각(HHMM)"] = "주말종료"
 
 if weekend_col:
     rename[weekend_col] = "주말운영"
@@ -209,7 +212,7 @@ for _, row in df.iterrows():
     {row['무료여부']}<br><br>
 
     📅 주말운영<br>
-    {row['주말운영']}<br><br>
+    {row["주말시작"]} ~ {row["주말종료"]}
 
     ☎ 전화번호<br>
     {row['전화번호']}
@@ -279,7 +282,7 @@ free_count = len(
     df[
         df["무료여부"]
         .astype(str)
-        .str.contains("무료|Y", na=False)
+        .str.contains("무료", na=False)
     ]
 
 )
