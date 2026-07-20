@@ -6,7 +6,45 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 
 from transformers import pipeline
 
+import matplotlib.pyplot as plt
+
+plt.rcParams["font.family"] = "Nanum Gothic"
+plt.rcParams["axes.unicode_minus"] = False
+
 st.set_page_config(page_title="YouTube 댓글 분석", layout="wide")
+st.markdown("""
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/gh/fonts-archive/NanumGothic/NanumGothic.css">
+
+<style>
+
+html, body, [class*="css"], .stApp{
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+h1,h2,h3,h4,h5,h6{
+    font-family: "Nanum Gothic", sans-serif;
+    font-weight:700;
+}
+
+div, p, span, label{
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+button{
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+input{
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+textarea{
+    font-family: "Nanum Gothic", sans-serif;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 st.title("🎬 YouTube 댓글 분석기")
 
