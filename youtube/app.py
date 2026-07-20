@@ -6,11 +6,6 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 
 from transformers import pipeline
 
-import matplotlib.pyplot as plt
-
-plt.rcParams["font.family"] = "Nanum Gothic"
-plt.rcParams["axes.unicode_minus"] = False
-
 st.set_page_config(page_title="YouTube 댓글 분석", layout="wide")
 st.markdown("""
 <link rel="stylesheet"
