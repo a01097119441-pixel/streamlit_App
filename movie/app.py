@@ -50,7 +50,7 @@ st.markdown(f"""
 
 .stApp {{
     background: linear-gradient(135deg, {color}, #ffffff);
-}
+}}
 
 .title {{
     text-align:center;
